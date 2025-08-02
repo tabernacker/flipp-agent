@@ -4,24 +4,36 @@ import sys
 
 app = Flask(__name__)
 
-def search_flipp_item(postal_code, query):
-    # Use the correct search endpoint
-    url = f"https://backflipp.wishabi.com/flipp/items/search?locale=en-ca&postal_code={postal_code}&q={query}"
+def fetch_items(url):
+    """Helper function to request items from Flipp API and return the 'items' list."""
     r = requests.get(url)
+    # Flipp sometimes returns 404 for queries with no matches
+    if r.status_code == 404:
+        return []
     r.raise_for_status()
-    items = r.json().get("items", [])
+    return r.json().get("items", [])
+
+def search_flipp_item(postal_code, query):
+    base = "https://backflipp.wishabi.com/flipp/items"
+
+    # Try the more accurate /search endpoint first
+    url_search = f"{base}/search?locale=en-ca&postal_code={postal_code}&q={query}"
+    items = fetch_items(url_search)
+
+    # Fallback: if no results, try the broader /items endpoint
+    if not items:
+        url_broad = f"{base}?locale=en-ca&postal_code={postal_code}&q={query}"
+        items = fetch_items(url_broad)
+
     results = []
-
     for i in items:
-        merchant = i.get("merchant", {}).get("name")
-        if not merchant:
-            continue  # Skip entries without a merchant
-
+        # Use merchant name if available, otherwise mark as Unknown
+        merchant = i.get("merchant", {}).get("name", "Unknown")
         name = i.get("name", "Unnamed item")
         price = i.get("current_price", "N/A")
         valid_to = i.get("valid_to", None)
 
-        # Build a flyer link if IDs are present
+        # Build a flyer link if flyer_id and clipping_id are available
         flyer_id = i.get("flyer_id")
         clipping_id = i.get("clipping_id")
         link = None
@@ -38,11 +50,9 @@ def search_flipp_item(postal_code, query):
 
     return results
 
-
 @app.route("/")
 def home():
     return "Flipp agent is running!"
-
 
 @app.route("/flipp_search", methods=["POST"])
 def flipp_search():
@@ -63,7 +73,6 @@ def flipp_search():
     except Exception as e:
         print("ERROR:", e, file=sys.stderr)
         return jsonify({"error": str(e)}), 500
-
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
