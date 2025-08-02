@@ -5,8 +5,8 @@ import sys
 app = Flask(__name__)
 
 def search_flipp_item(postal_code, query):
-    # Use /items endpoint for more reliable merchant info
-    url = f"https://backflipp.wishabi.com/flipp/items?locale=en-ca&postal_code={postal_code}&q={query}"
+    # Use the correct search endpoint
+    url = f"https://backflipp.wishabi.com/flipp/items/search?locale=en-ca&postal_code={postal_code}&q={query}"
     r = requests.get(url)
     r.raise_for_status()
     items = r.json().get("items", [])
@@ -15,13 +15,13 @@ def search_flipp_item(postal_code, query):
     for i in items:
         merchant = i.get("merchant", {}).get("name")
         if not merchant:
-            continue  # Skip results without a merchant
+            continue  # Skip entries without a merchant
 
         name = i.get("name", "Unnamed item")
         price = i.get("current_price", "N/A")
         valid_to = i.get("valid_to", None)
 
-        # Construct clickable Flipp URL if flyer/clipping IDs are available
+        # Build a flyer link if IDs are present
         flyer_id = i.get("flyer_id")
         clipping_id = i.get("clipping_id")
         link = None
