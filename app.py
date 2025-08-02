@@ -11,11 +11,15 @@ def search_flipp_item(postal_code, query):
     items = r.json().get("items", [])
     results = []
     for i in items:
+        merchant = i.get("merchant", {}).get("name", "Unknown")
+        name = i.get("name", "Unnamed item")
+        price = i.get("current_price", "N/A")
+        valid_to = i.get("valid_to", None)
         results.append({
-            "store": i["merchant"]["name"],
-            "flyer_item": i["name"],
-            "price": i.get("current_price"),
-            "valid_to": i.get("valid_to")
+            "store": merchant,
+            "flyer_item": name,
+            "price": price,
+            "valid_to": valid_to
         })
     return results
 
